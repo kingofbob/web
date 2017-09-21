@@ -9,14 +9,12 @@ function Transmission() {
 	this.initialize();
 }
 
-function torrentSearching(searchValue){
+function torrentSearching(searchValue) {
 	document.getElementById('loading_spinner').style.display = 'block';
-	
-	
+
 	var mainUrl = 'http://soongwei.synology.me/soongwei/TPBService/searchGET';
 
-	var sURL = mainUrl+ searchValue;
-	
+	var sURL = mainUrl + searchValue;
 
 	// var yql =encodeURIComponent(sURL);
 
@@ -29,6 +27,8 @@ function torrentSearching(searchValue){
 	document.getElementsByTagName('head')[0].appendChild(script);
 	// alert("done xd: " + yql);
 	console.log("url: " + yql);
+	var currentLocation = window.location.hostname + ":" + window.location.port;
+	console.log("User url: " + currentLocation);
 
 	var getJSON = function(url) {
 		return new Promise(
@@ -36,12 +36,21 @@ function torrentSearching(searchValue){
 					var xhr = new XMLHttpRequest();
 					xhr.open('get', url, true);
 					xhr.responseType = 'json';
-					xhr.withCredentials = true;
-					xhr.timeout = 30000; // Set timeout to 4 seconds
+					xhr.withCredentials = false;
+					xhr.timeout = 10000; // Set timeout to 4 seconds
 					// (4000 milliseconds)
 					xhr.ontimeout = function() {
-						alert("Server is under maintenance. Please try again later.");
-						document.getElementById('loading_spinner').style.display = 'none';
+						
+						requestRetries = requestRetries + 1;
+						if(requestRetries < 3){
+					
+							torrentSearching(searchValue);
+							
+						}else{
+							alert("Server is under maintenance or currently slow. Please try your search again.");
+							document.getElementById('loading_spinner').style.display = 'none';
+						}
+						
 					}
 					xhr.onload = function() {
 						var status = xhr.status;
@@ -57,79 +66,73 @@ function torrentSearching(searchValue){
 				});
 	};
 
-	getJSON(yql)
-			.then(
-					function(data) {
-						// you can comment this, i used it to debug
-						console.log(JSON.stringify(data, undefined, 2)); // display
-						// the
-						// result
-						// in
-						// an
-						// HTML
-						// element
+	getJSON(yql).then(function(data) {
+		// you can comment this, i used it to debug
+		console.log(JSON.stringify(data, undefined, 2)); // display
+		// the
+		// result
+		// in
+		// an
+		// HTML
+		// element
 
-						magnet = [];
-						title = [];
-						cat1 = [];
-						cat2 = [];
+		magnet = [];
+		title = [];
+		cat1 = [];
+		cat2 = [];
 
-						var size = [];
-						var date = [];
-						var seed = [];
+		var size = [];
+		var date = [];
+		var seed = [];
 
-						var elmtTable = document
-								.getElementById('example');
-						var tableRows = elmtTable
-								.getElementsByTagName('tr');
-						var rowCount = tableRows.length;
+		var elmtTable = document.getElementById('example');
+		var tableRows = elmtTable.getElementsByTagName('tr');
+		var rowCount = tableRows.length;
 
-						for (var x = rowCount - 1; x > 0; x--) {
-							elmtTable.removeChild(tableRows[x]);
-						}
+		for (var x = rowCount - 1; x > 0; x--) {
+			elmtTable.removeChild(tableRows[x]);
+		}
 
-						// parse all data here
-						var jsonObject = JSON.parse(JSON.stringify(
-								data, undefined, 2));
+		// parse all data here
+		var jsonObject = JSON.parse(JSON.stringify(data, undefined, 2));
 
-						if (jsonObject.error) {
-							alert('Server is under maintenance. Please try again later.');
-						}
+		if (jsonObject.error) {
+			alert('Server is under maintenance. Please try again later.');
+		}
 
-						for (var objNum = 0; objNum < jsonObject.results.length; objNum++) {
-							title
-									.push(jsonObject.results[objNum].title);
+		for (var objNum = 0; objNum < jsonObject.results.length; objNum++) {
+			title.push(jsonObject.results[objNum].title);
 
-							cat1.push(jsonObject.results[objNum].path2);
-							size.push(jsonObject.results[objNum].size);
-							date.push(jsonObject.results[objNum].age);
-							seed.push(jsonObject.results[objNum].seed);
-							magnet
-									.push(jsonObject.results[objNum].magnet);
+			cat1.push(jsonObject.results[objNum].path2);
+			size.push(jsonObject.results[objNum].size);
+			date.push(jsonObject.results[objNum].age);
+			seed.push(jsonObject.results[objNum].seed);
+			magnet.push(jsonObject.results[objNum].magnet);
 
-						}
+		}
 
-						for (var t = 0; t < title.length; t++) {
+		for (var t = 0; t < title.length; t++) {
 
-							var x = document.getElementById('example');
-							var new_row = x.rows[0].cloneNode(true);
+			var x = document.getElementById('example');
+			var new_row = x.rows[0].cloneNode(true);
 
-							new_row.cells[0].innerHTML = title[t];
-							new_row.cells[1].innerHTML = size[t];
-							new_row.cells[2].innerHTML = seed[t];
-							new_row.cells[3].innerHTML = date[t];
+			new_row.cells[0].innerHTML = title[t];
+			new_row.cells[1].innerHTML = size[t];
+			new_row.cells[2].innerHTML = seed[t];
+			new_row.cells[3].innerHTML = date[t];
 
-							x.appendChild(new_row);
+			x.appendChild(new_row);
 
-						}
-						document.getElementById('loading_spinner').style.display = 'none';
+		}
+		document.getElementById('loading_spinner').style.display = 'none';
 
-					},
-					function(status) { // error detection....
-						alert('Server is under maintenance. Please try again later.');
-						document.getElementById('loading_spinner').style.display = 'none';
-					});
+	}, function(status) { // error detection....
+		alert('Server is under maintenance. Please try again later.');
+		document.getElementById('loading_spinner').style.display = 'none';
+	});
 }
+
+var requestRetries = 0;
 
 var magnet = [];
 var title = [];
@@ -172,31 +175,26 @@ Transmission.prototype = {
 
 		// Initialize the clutch preferences
 		Prefs.getClutchPrefs(this);
-		$('#top_tv_shows_button').on(
-				'click',
-				function() {
-					torrentSearching("?type=2&search=");
-				});
-		
-	
-		$('#top_music_button').on(
-				'click',
-				function() {
-					 torrentSearching("?type=3&search=");
-				});
-		
-		
-		$('#top_movies_button').on(
-				'click',
-				function() {
-					  torrentSearching("?type=1&search=");
-				});
-		$('#torrent_upload_url').keyup(function(event) {
-		    if (event.which === 13) {
-		      $(this).blur();
-		    }
+		$('#top_tv_shows_button').on('click', function() {
+			requestRetries = 0;
+			torrentSearching("?type=2&search=");
 		});
-		
+
+		$('#top_music_button').on('click', function() {
+			requestRetries = 0;
+			torrentSearching("?type=3&search=");
+		});
+
+		$('#top_movies_button').on('click', function() {
+			requestRetries = 0;
+			torrentSearching("?type=1&search=");
+		});
+		$('#torrent_upload_url').keyup(function(event) {
+			if (event.which === 13) {
+				$(this).blur();
+			}
+		});
+
 		// this is my code
 		$('#example').on(
 				'click',
@@ -257,6 +255,67 @@ Transmission.prototype = {
 
 					}
 				});
+		$('#example').on("longclick", "tr", function(e) {
+			console.log("long presed");
+			console.log("long press: " +($(this).index()));
+			
+			if (($(this).index()) > 0) {
+				// alert(magnet[($(this).index())-1]);
+			
+				var args = {};
+				// var remote = this.remote;
+				var paused = !$('#torrent_auto_start').is(':checked');
+				// var folderInput =
+				// $('input#add-dialog-folder-input');
+				var destination = $("#download-dir").val();
+
+				// alert('Dest: '+
+				// destination );
+				// test alert yes no
+				var folderName = prompt("Enter folder name to save\n"
+						+ title[($(this).index()) - 2], "");
+				if (folderName != null) {
+					destination = destination + '/' + folderName;
+					// --------------------\\\new
+					// shit here
+
+					var url = magnet[($(this).index()) - 2];
+					if (url != '') {
+
+						// alert( "cat1: " +
+						// cat1[($(this).index())-1]
+						// +
+						// "cat2: "
+						// +cat2[($(this).index())-1]
+						// );
+
+						if (url.match(/^[0-9a-f]{40}$/i))
+							url = 'magnet:?xt=urn:btih:' + url;
+						var o = {
+							'method' : 'torrent-add',
+							arguments : {
+								'paused' : paused,
+								'download-dir' : destination,
+								'filename' : url
+							}
+						};
+						gRemote.sendRequest(o, function(response) {
+							if (response.result != 'success')
+								alert('Error adding "' + file.name
+										+ '": ' + response.result);
+						});
+					}
+
+					// ========================
+					// alert('done' );
+
+					$('body.open_showing').removeClass('open_showing');
+					$('#upload_container').hide();
+				}
+
+			}
+		});
+
 
 		// Set up user events
 		$('#toolbar-pause').click($.proxy(this.stopSelectedClicked, this));
@@ -277,9 +336,6 @@ Transmission.prototype = {
 
 		$('#turtle-button').click($.proxy(this.toggleTurtleClicked, this));
 		$('#compact-button').click($.proxy(this.toggleCompactClicked, this));
-		
-	
-	
 
 		// tell jQuery to copy the dataTransfer property from events over if it
 		// exists
@@ -1156,11 +1212,12 @@ Transmission.prototype = {
 			var urlvalue = $('#torrent_upload_url').val();
 			urlvalue = urlvalue.replace(/\s/g, "%20");
 
+			requestRetries = 0;
 			torrentSearching("?type=0&search=" + urlvalue);
 		}
 
 	},
-	
+
 	torrentSearch : function(searchValue) {
 	},
 
